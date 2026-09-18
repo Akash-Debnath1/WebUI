@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Localhost AI Chat</title>
+  <meta name="description" content="Local, privacy-focused ChatGPT-style AI interface built entirely with Vanilla HTML5, CSS3, and JavaScript.">
+  <link rel="stylesheet" href="style.css?v=2.0">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5z'/%3E%3C/svg%3E">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Mobile Sidebar Backdrop -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar" id="app-sidebar" aria-label="Sidebar Navigation">
+      <div class="sidebar-header">
+        <div class="app-brand">
+          <div class="brand-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </div>
+          <span class="brand-text">Localhost AI</span>
+        </div>
+      </div>
+
+      <div class="sidebar-actions">
+        <button type="button" class="btn-new-chat" id="btn-new-chat" title="Create a new conversation" onclick="if(window.__startNewChat) window.__startNewChat();">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New Chat</span>
+        </button>
+
+        <div class="sidebar-search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="search" class="sidebar-search-input" id="search-chats-input" placeholder="Search conversations..." aria-label="Search conversations">
+        </div>
+      </div>
+
+      <div class="sidebar-history-scroll" id="sidebar-chats-container" role="navigation" aria-label="Chat History">
+        <!-- Rendered dynamically by js/ui.js -->
+      </div>
+
+      <div class="sidebar-footer">
+        <button type="button" class="nav-link-btn active" id="nav-chat-btn" onclick="window.location.hash='#chat'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Chat</span>
+        </button>
+        <button type="button" class="nav-link-btn" id="nav-settings-btn" onclick="window.location.hash='#settings'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <main class="app-main">
+      <!-- Chat View -->
+      <section class="chat-view" id="view-chat" style="display: flex; flex-direction: column; height: 100%;">
+        <!-- Header Bar with Model Selector -->
+        <header class="main-header">
+          <div class="header-left">
+            <button type="button" class="btn-mobile-sidebar" id="btn-sidebar-toggle" aria-label="Toggle Sidebar Menu">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+
+            <!-- Dynamic Model Selector Popover -->
+            <div class="model-selector-container">
+              <button type="button" class="btn-model-selector" id="model-selector-btn" aria-haspopup="true" aria-expanded="false">
+                <span class="model-badge">Loading...</span>
+                <span class="model-name">Please wait</span>
+                <svg class="chevron-down" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <div class="model-selector-dropdown" id="model-selector-dropdown" role="menu">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <div class="header-right">
+            <button type="button" class="btn-header-action btn-trigger-settings" title="Open Settings" onclick="window.location.hash='#settings'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Scrollable Messages Area -->
+        <div class="chat-scroll-area" id="chat-scroll-area">
+          <!-- Chat Empty State (When no messages in active chat) -->
+          <div class="chat-empty-state" id="chat-empty-state" style="display: none;">
+            <div class="empty-state-badge">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            </div>
+            <h2 class="empty-state-title">Where knowledge begins</h2>
+            <p class="empty-state-subtitle">Ask anything, analyze data, or generate code with full local streaming speed.</p>
+            <div class="quick-prompts-grid">
+              <div class="quick-prompt-card" data-prompt="Explain how REST APIs work, including HTTP verbs, status codes, and headers.">
+                <div class="prompt-icon">🌐</div>
+                <div class="prompt-text-group">
+                  <div class="quick-prompt-title">Explain REST APIs</div>
+                  <div class="quick-prompt-desc">Endpoints, HTTP verbs, and headers</div>
+                </div>
+              </div>
+              <div class="quick-prompt-card" data-prompt="Write a clean Python script to scrape and parse RSS feeds concurrently using asyncio.">
+                <div class="prompt-icon">🐍</div>
+                <div class="prompt-text-group">
+                  <div class="quick-prompt-title">Python Async Scraper</div>
+                  <div class="quick-prompt-desc">Concurrent RSS parser script</div>
+                </div>
+              </div>
+              <div class="quick-prompt-card" data-prompt="Explain quantum computing in simple terms with a real-world analogy.">
+                <div class="prompt-icon">⚛️</div>
+                <div class="prompt-text-group">
+                  <div class="quick-prompt-title">Quantum Computing</div>
+                  <div class="quick-prompt-desc">Simple concepts with analogy</div>
+                </div>
+              </div>
+              <div class="quick-prompt-card" data-prompt="Help me debug and optimize this JavaScript function for high throughput.">
+                <div class="prompt-icon">⚡</div>
+                <div class="prompt-text-group">
+                  <div class="quick-prompt-title">Optimize Code</div>
+                  <div class="quick-prompt-desc">High throughput performance tuning</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Provider Configured State -->
+          <div class="chat-no-provider-state" id="chat-no-provider-state" style="display: none;">
+            <div class="empty-state-badge badge-warning">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h2 class="empty-state-title">No AI Provider Configured</h2>
+            <p class="empty-state-subtitle">Connect your OpenAI, DeepSeek, Groq, or local Ollama endpoint in Settings to start chatting.</p>
+            <button type="button" class="btn btn-primary" onclick="window.location.hash='#settings'">Configure Provider in Settings</button>
+          </div>
+
+          <!-- Dynamic Chat Messages -->
+          <div class="chat-messages-container" id="chat-messages-container">
+            <!-- Messages rendered dynamically by js/ui.js -->
+          </div>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-wrapper">
+          <div class="chat-input-box">
+            <textarea
+              class="chat-input-textarea"
+              id="chat-input-textarea"
+              placeholder="Ask anything... (Enter to send, Shift+Enter for new line)"
+              rows="1"
+              aria-label="Chat prompt input"
+            ></textarea>
+            <div class="chat-input-actions">
+              <button type="button" class="btn-send-message" id="btn-send-message" aria-label="Send message" title="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+              <button type="button" class="btn-stop-generation" id="btn-stop-generation" aria-label="Stop generation">
+                <span class="stop-square">■</span>
+                <span>Stop</span>
+              </button>
+            </div>
+          </div>
+          <div class="input-disclaimer">
+            Localhost AI connects directly to your configured provider. API keys are stored only in your browser.
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings View -->
+      <section class="settings-view" id="view-settings" style="display: none;">
+        <div class="settings-container">
+          <div class="settings-header">
+            <div>
+              <h1 class="settings-title">Settings</h1>
+              <p class="settings-desc">Manage API providers, appearance themes, chat preferences, and local data storage.</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm btn-back-to-chat" id="btn-back-to-chat" onclick="window.location.hash='#chat'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Back to Chat</span>
+            </button>
+          </div>
+
+          <!-- Privacy Notice Banner -->
+          <div class="privacy-alert-box">
+            <div class="privacy-alert-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <div class="privacy-alert-content">
+              <div class="privacy-alert-title">Client-Side Privacy</div>
+              <div class="privacy-alert-text">
+                Your API keys, providers, and chat history are saved exclusively in your browser's <code>localStorage</code>. No telemetry or credentials are sent to any external server other than the Base URL you configure.
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Providers Section -->
+          <div class="settings-section" id="section-providers">
+            <div class="settings-section-header">
+              <div class="section-title-group">
+                <h2 class="settings-section-title">AI Providers</h2>
+                <div class="settings-section-desc">Configure multiple OpenAI-compatible API providers (OpenAI, DeepSeek, Groq, Ollama, etc.). Switch models anytime in Chat.</div>
+              </div>
+              <button type="button" class="btn btn-primary" id="btn-open-add-provider-modal" onclick="window.__openProviderEditor()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Add Provider</span>
+              </button>
+            </div>
+
+            <!-- Quick Add Provider Inline Form (Accordion/Card) -->
+            <div class="provider-editor-card" id="provider-inline-editor" style="display: block;">
+              <div class="editor-card-header">
+                <h3 class="editor-title" id="provider-editor-title">Configure Provider</h3>
+                <button type="button" class="btn-icon-close" id="btn-close-inline-editor" aria-label="Close Form" onclick="window.__closeProviderEditor()">&times;</button>
+              </div>
+
+              <!-- Quick Presets -->
+              <div class="form-group">
+                <label class="form-label">Click a Preset to Auto-Fill:</label>
+                <div class="preset-chips-grid">
+                  <button type="button" class="preset-chip" data-preset="openai" onclick="window.__selectPreset('openai')">
+                    <span class="preset-chip-name">OpenAI</span>
+                    <span class="preset-chip-url">api.openai.com</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-preset="deepseek" onclick="window.__selectPreset('deepseek')">
+                    <span class="preset-chip-name">DeepSeek</span>
+                    <span class="preset-chip-url">api.deepseek.com</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-preset="tokenharbor" onclick="window.__selectPreset('tokenharbor')">
+                    <span class="preset-chip-name">TokenHarbor</span>
+                    <span class="preset-chip-url">tokenharbor.ai</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-preset="groq" onclick="window.__selectPreset('groq')">
+                    <span class="preset-chip-name">Groq</span>
+                    <span class="preset-chip-url">api.groq.com</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-preset="ollama" onclick="window.__selectPreset('ollama')">
+                    <span class="preset-chip-name">Ollama Local</span>
+                    <span class="preset-chip-url">localhost:11434</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-preset="openrouter" onclick="window.__selectPreset('openrouter')">
+                    <span class="preset-chip-name">OpenRouter</span>
+                    <span class="preset-chip-url">openrouter.ai</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-preset="lmstudio" onclick="window.__selectPreset('lmstudio')">
+                    <span class="preset-chip-name">LM Studio</span>
+                    <span class="preset-chip-url">localhost:1234</span>
+                  </button>
+                </div>
+              </div>
+
+              <form id="provider-form">
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label class="form-label" for="provider-name">Provider Name <span class="required">*</span></label>
+                    <input type="text" class="input-field" id="provider-name" placeholder="e.g. OpenAI, DeepSeek, Local Ollama" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="provider-base-url">Base URL <span class="required">*</span></label>
+                    <input type="url" class="input-field" id="provider-base-url" placeholder="https://api.openai.com/v1" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="provider-api-key">API Key (Optional for local Ollama)</label>
+                  <div class="password-input-group">
+                    <input type="password" class="input-field" id="provider-api-key" placeholder="sk-••••••••••••••••••••••••••••••••" autocomplete="off">
+                    <button type="button" class="btn-toggle-password" id="btn-toggle-key-visibility" aria-label="Show API Key" title="Show/Hide Key" onclick="window.__toggleKeyVisibility()">
+                      <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Configured Models <span class="required">*</span></label>
+                  <div class="models-input-container" id="provider-models-inputs">
+                    <div class="model-input-row">
+                      <input type="text" class="input-field model-name-input" placeholder="e.g. gpt-4o, deepseek-chat" value="" required>
+                      <button type="button" class="btn btn-icon-only btn-remove-model" title="Remove Model" aria-label="Remove Model">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-add-model-input" onclick="window.__addModelRow()">
+                    + Add Another Model
+                  </button>
+                </div>
+
+                <div id="connection-test-result" class="test-result-box" style="display: none;"></div>
+
+                <div class="form-actions-bar">
+                  <button type="button" class="btn btn-secondary" id="btn-test-connection">Test Connection</button>
+                  <div class="form-actions-right">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-provider-form" onclick="window.__closeProviderEditor()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-provider">Save Provider</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <!-- Configured Providers List -->
+            <div class="providers-list" id="providers-list-container">
+              <!-- Dynamically populated with cards -->
+            </div>
+          </div>
+
+          <!-- Custom Instructions (System Prompt) Section -->
+          <div class="settings-section" id="section-custom-instructions">
+            <div class="settings-section-header">
+              <div class="section-title-group">
+                <h2 class="settings-section-title">Custom Instructions (System Prompt)</h2>
+                <div class="settings-section-desc">Set global persona, formatting guidelines, or instructions the model should follow across all conversations.</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Instruction Presets (Click to Auto-Fill):</label>
+              <div class="preset-chips-grid custom-instructions-presets">
+                <button type="button" class="preset-chip" onclick="window.__setInstructionPreset('coder')">
+                  <span class="preset-chip-name">Senior Coder</span>
+                  <span class="preset-chip-url">Clean, performant code</span>
+                </button>
+                <button type="button" class="preset-chip" onclick="window.__setInstructionPreset('concise')">
+                  <span class="preset-chip-name">Direct & Concise</span>
+                  <span class="preset-chip-url">No filler or preambles</span>
+                </button>
+                <button type="button" class="preset-chip" onclick="window.__setInstructionPreset('tutor')">
+                  <span class="preset-chip-name">Expert Tutor</span>
+                  <span class="preset-chip-url">Step-by-step concepts</span>
+                </button>
+                <button type="button" class="preset-chip" onclick="window.__setInstructionPreset('clear')">
+                  <span class="preset-chip-name">Reset / Clear</span>
+                  <span class="preset-chip-url">Remove instructions</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="custom-instructions-input">System Instructions Text</label>
+              <textarea
+                class="input-field custom-instructions-textarea"
+                id="custom-instructions-input"
+                rows="4"
+                placeholder="e.g. You are a senior software engineer. Answer questions with clean, well-tested code and direct, concise explanations. Avoid unnecessary filler."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Appearance Section -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <div class="section-title-group">
+                <h2 class="settings-section-title">Appearance</h2>
+                <div class="settings-section-desc">Customize UI color themes, density, and animation effects.</div>
+              </div>
+            </div>
+
+            <div class="setting-option-row">
+              <div class="setting-option-info">
+                <div class="setting-option-title">Theme</div>
+                <div class="setting-option-desc">Select dark mode, light mode, or synchronize with your OS preference.</div>
+              </div>
+              <div class="theme-selector-cards">
+                <label class="theme-card">
+                  <input type="radio" name="theme-option" value="dark">
+                  <div class="theme-card-inner">
+                    <div class="theme-swatch dark-swatch"></div>
+                    <span>Dark</span>
+                  </div>
+                </label>
+                <label class="theme-card">
+                  <input type="radio" name="theme-option" value="light">
+                  <div class="theme-card-inner">
+                    <div class="theme-swatch light-swatch"></div>
+                    <span>Light</span>
+                  </div>
+                </label>
+                <label class="theme-card">
+                  <input type="radio" name="theme-option" value="system">
+                  <div class="theme-card-inner">
+                    <div class="theme-swatch system-swatch"></div>
+                    <span>System</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-option-row">
+              <div class="setting-option-info">
+                <div class="setting-option-title">Compact Mode</div>
+                <div class="setting-option-desc">Reduce message padding and avatar sizes for higher information density.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="check-compact-mode">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-option-row">
+              <div class="setting-option-info">
+                <div class="setting-option-title">Interface Animations</div>
+                <div class="setting-option-desc">Enable smooth transitions, toast slide-ins, and typing indicators.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="check-animations" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Chat Preferences Section -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <div class="section-title-group">
+                <h2 class="settings-section-title">Chat Preferences</h2>
+                <div class="settings-section-desc">Customize message submission behavior and display options.</div>
+              </div>
+            </div>
+
+            <div class="setting-option-row">
+              <div class="setting-option-info">
+                <div class="setting-option-title">Enter to Send</div>
+                <div class="setting-option-desc">Press Enter to send message, Shift+Enter to insert a newline.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="check-enter-send" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-option-row">
+              <div class="setting-option-info">
+                <div class="setting-option-title">Show Timestamps</div>
+                <div class="setting-option-desc">Display message creation timestamps alongside usernames.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="check-timestamps" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-option-row">
+              <div class="setting-option-info">
+                <div class="setting-option-title">Auto-Scroll</div>
+                <div class="setting-option-desc">Automatically scroll down as streaming response tokens arrive.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="check-autoscroll" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-option-row">
+              <div class="setting-option-info">
+                <div class="setting-option-title">Markdown Formatting</div>
+                <div class="setting-option-desc">Render formatted headings, lists, tables, and syntax code blocks.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="check-markdown" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-option-row">
+              <div class="setting-option-info">
+                <div class="setting-option-title">Developer Mode</div>
+                <div class="setting-option-desc">Display telemetry metrics (HTTP status, latency ms, streaming state, payload size) below AI responses.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="check-dev-mode">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Storage & Backup Section -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <div class="section-title-group">
+                <h2 class="settings-section-title">Storage & Data Management</h2>
+                <div class="settings-section-desc">Monitor browser storage usage, download full JSON backups, or restore data.</div>
+              </div>
+            </div>
+
+            <div class="storage-stats-grid">
+              <div class="stat-card">
+                <div class="stat-value" id="stat-providers-count">0</div>
+                <div class="stat-label">Providers</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-chats-count">0</div>
+                <div class="stat-label">Conversations</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-messages-count">0</div>
+                <div class="stat-label">Messages</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-storage-size">0 B</div>
+                <div class="stat-label">Storage Used</div>
+              </div>
+            </div>
+
+            <div class="storage-actions-bar">
+              <button type="button" class="btn btn-secondary" id="btn-export-data">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Export Backup (.json)</span>
+              </button>
+              <input type="file" id="input-import-file" accept=".json" style="display: none;">
+              <button type="button" class="btn btn-secondary" id="btn-import-data">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Import Backup</span>
+              </button>
+              <button type="button" class="btn btn-danger-outline" id="btn-clear-conversations">Clear Conversations</button>
+              <button type="button" class="btn btn-danger" id="btn-clear-all-data">Wipe All Local Data</button>
+            </div>
+          </div>
+
+          <!-- About Section -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <div class="section-title-group">
+                <h2 class="settings-section-title">About Localhost AI</h2>
+                <div class="settings-section-desc">Vanilla HTML5, CSS3, and JavaScript running 100% in your browser.</div>
+              </div>
+            </div>
+            <p class="about-text">
+              This application makes direct browser-to-API requests via standard <code>fetch()</code> with Server-Sent Events (SSE) streaming support.
+              There is zero server backend; all conversations, keys, and settings are saved locally in your browser's <code>localStorage</code>.
+              <br><br>
+              <strong>CORS Notice:</strong> Your configured endpoint must return <code>Access-Control-Allow-Origin</code> headers for direct browser requests (e.g. OpenRouter, Cloudflare AI Gateway, or local Ollama started with <code>OLLAMA_ORIGINS="*"</code>).
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Reusable Confirmation Modal -->
+  <div class="modal-overlay" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirm-modal-title">Confirm Action</h3>
+        <button type="button" class="btn-modal-close" id="btn-confirm-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body" id="confirm-modal-message">
+        Are you sure you want to perform this action?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-confirm-cancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-action">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Conversation Modal -->
+  <div class="modal-overlay" id="rename-modal" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="rename-modal-title">Rename Conversation</h3>
+        <button type="button" class="btn-modal-close" id="btn-rename-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="rename-chat-input" class="form-label">Conversation Title</label>
+        <input type="text" class="input-field" id="rename-chat-input" maxlength="80">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-rename-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-rename-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- Direct Global Helper Script (Guaranteed immediate execution before modules) -->
+  <script>
+    window.__openProviderEditor = function(id) {
+      var editor = document.getElementById('provider-inline-editor');
+      if (editor) {
+        editor.style.display = 'block';
+        editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      var nameInput = document.getElementById('provider-name');
+      if (nameInput) nameInput.focus();
+    };
+
+    window.__closeProviderEditor = function() {
+      var editor = document.getElementById('provider-inline-editor');
+      if (editor) editor.style.display = 'none';
+      var form = document.getElementById('provider-form');
+      if (form) form.reset();
+      var testRes = document.getElementById('connection-test-result');
+      if (testRes) testRes.style.display = 'none';
+    };
+
+    window.__selectPreset = function(key) {
+      var presets = {
+        openai: { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', models: ['gpt-4o', 'gpt-4o-mini'] },
+        deepseek: { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-reasoner'] },
+        groq: { name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'] },
+        ollama: { name: 'Ollama (Local)', baseUrl: 'http://localhost:11434/v1', models: ['llama3', 'mistral'] },
+        openrouter: { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', models: ['anthropic/claude-3.5-sonnet'] },
+        lmstudio: { name: 'LM Studio (Local)', baseUrl: 'http://localhost:1234/v1', models: ['local-model'] }
+      };
+      var p = presets[key];
+      if (!p) return;
+      var nameInput = document.getElementById('provider-name');
+      var urlInput = document.getElementById('provider-base-url');
+      if (nameInput) nameInput.value = p.name;
+      if (urlInput) urlInput.value = p.baseUrl;
+      var modelsContainer = document.getElementById('provider-models-inputs');
+      if (modelsContainer && p.models) {
+        modelsContainer.innerHTML = '';
+        p.models.forEach(function(m) {
+          window.__appendModelInput(modelsContainer, m);
+        });
+      }
+      window.__openProviderEditor();
+    };
+
+    window.__appendModelInput = function(container, val) {
+      if (!container) return;
+      var row = document.createElement('div');
+      row.className = 'model-input-row';
+      row.innerHTML = '<input type="text" class="input-field model-name-input" placeholder="e.g. gpt-4o" value="' + (val || '') + '" required>' +
+        '<button type="button" class="btn btn-icon-only btn-remove-model" title="Remove Model" onclick="this.closest(\'.model-input-row\').remove()">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+        '</button>';
+      container.appendChild(row);
+    };
+
+    window.__addModelRow = function() {
+      var modelsContainer = document.getElementById('provider-models-inputs');
+      window.__appendModelInput(modelsContainer, '');
+    };
+
+    window.__toggleKeyVisibility = function() {
+      var apiKeyInput = document.getElementById('provider-api-key');
+      var keyToggleBtn = document.getElementById('btn-toggle-key-visibility');
+      if (apiKeyInput && keyToggleBtn) {
+        var isPass = apiKeyInput.type === 'password';
+        apiKeyInput.type = isPass ? 'text' : 'password';
+        keyToggleBtn.setAttribute('aria-label', isPass ? 'Hide API Key' : 'Show API Key');
+      }
+    };
+
+    window.__setInstructionPreset = function(type) {
+      var presets = {
+        coder: 'You are an expert senior software engineer. Provide clean, performant, and production-ready code with concise explanations. Focus on best practices and avoid unnecessary boilerplate.',
+        concise: 'Be extremely direct, concise, and accurate. Avoid conversational filler, preambles, and summaries. Get straight to the answer.',
+        tutor: 'You are an empathetic, world-class educator. Explain complex concepts step-by-step with clear analogies, real-world examples, and intuitive summaries.',
+        clear: ''
+      };
+      var textarea = document.getElementById('custom-instructions-input');
+      if (textarea) {
+        textarea.value = presets[type] !== undefined ? presets[type] : '';
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    };
+
+    window.__selectChat = function(chatId) {
+      localStorage.setItem('aichat_active_chat_id', JSON.stringify(chatId));
+      window.location.hash = '#chat';
+    };
+  </script>
+
+  <!-- Main JavaScript Application Bootstrap (ES Module with cache-busting) -->
+  <script type="module" src="js/app.js?v=2.0"></script>
+</body>
+</html>

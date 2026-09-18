@@ -1,0 +1,23 @@
+# OS / Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Temporary test logs
+scratch/
+test_*.js
+probe_*.py
