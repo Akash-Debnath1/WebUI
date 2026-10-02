@@ -88,6 +88,7 @@ It will start the server, display the link, and automatically open your default 
 
 ```bash
 chmod +x start.sh
+
 ./start.sh
 ```
 
@@ -105,7 +106,7 @@ See the full [Android guide](#-running-on-android) below — it takes about 5 mi
 
 ```bash
 # Clone or download the repository
-git clone https://github.com/AIwolfie/WebUI.git
+git clone https://github.com/Akash-Debnath1/WebUI.git
 cd WebUI
 
 # Launch the static server with built-in CORS proxy
