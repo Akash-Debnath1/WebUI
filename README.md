@@ -7,13 +7,14 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript_ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![Zero Dependencies](https://img.shields.io/badge/Zero_Dependencies-100%25_Vanilla-emerald?style=for-the-badge)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25_Local-blue?style=for-the-badge)
+![Cross Platform](https://img.shields.io/badge/Platform-Windows_%7C_Linux_%7C_Android-orange?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
 
 **A high-performance, private, ChatGPT-style AI interface built entirely with pure Vanilla HTML5, CSS3, and JavaScript.**
 
-*Zero frontend frameworks. Zero build steps. Zero npm packages. Just run and chat.*
+*Zero frontend frameworks. Zero build steps. Zero npm packages. Just run and chat — on Windows, Linux, or your Android phone.*
 
-[Features](#-key-features) • [Quick Start](#-quick-start) • [Supported Providers](#-supported-ai-providers) • [Architecture](#-project-structure) • [Privacy](#-privacy--security)
+[Features](#-key-features) • [Quick Start](#-quick-start) • [Android](#-running-on-android) • [Web Search](#-live-web-search-auto-detect) • [Attachments](#-file-folder--screenshot-attachments) • [Architecture](#-project-structure) • [Privacy](#-privacy--security)
 
 </div>
 
@@ -21,25 +22,24 @@
 
 ## ⚡ Overview
 
-**Localhost AI** is a lightweight, self-hosted web interface designed for chatting with any **OpenAI-compatible LLM provider** (OpenAI, DeepSeek, TokenHarbor, Groq, Ollama, OpenRouter, LM Studio, or custom gateways).
+**Localhost AI** is a lightweight, self-hosted web interface designed for chatting with any **OpenAI-compatible LLM provider** (OpenAI, DeepSeek, Groq, Ollama, OpenRouter, LM Studio, or custom gateways).
 
-It runs directly in your browser, streams responses token-by-token in real time, and stores all conversation history and API keys securely in your browser's `localStorage`.
+It runs directly in your browser, streams responses token-by-token in real time, and stores all conversation history, attachments, and API keys securely in your browser's `localStorage`. It also supports **live web search** (just paste a search engine's URL — no API setup required for most engines) and lets you **attach files, folders, and screenshots** directly into the conversation.
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │  ✦ Localhost AI   │  [ DeepSeek ▾ (deepseek-chat) ]                    │
 ├───────────────────┼────────────────────────────────────────────────────┤
 │  + New Chat       │                                                    │
-│  🔍 Search chats  │  👤 You: Explain quantum computing in 3 bullets.   │
+│  🔍 Search chats  │  👤 You: 📎 report.pdf  Summarize this report      │
+│                   │       and check today's exchange rate.             │
+│  📅 Today         │                                                    │
+│  • Quantum Basics │  ✦ AI: Based on the report...                      │
+│  • Python Scraper │       🌐 Web sources: [xe.com] [reuters.com]       │
 │                   │                                                    │
-│  📅 Today         │  ✦ AI:                                             │
-│  • Quantum Basics │  1. Superposition: Qubits exist in multiple states.│
-│  • Python Scraper │  2. Entanglement: Qubits remain linked at distance.│
-│                   │  3. Speedup: Solves complex algorithms instantly.  │
-│  📅 Yesterday     │                                                    │
-│  • REST API Guide │  ┌──────────────────────────────────────────────┐  │
-│                   │  │ Ask anything... (Enter to send)           ➤ │  │
-│  ⚙ Settings       │  └──────────────────────────────────────────────┘  │
+│  📅 Yesterday     │  ┌──────────────────────────────────────────────┐  │
+│  • REST API Guide │  │ 📎  🌐 Web  Ask anything...               ➤ │  │
+│                   │  └──────────────────────────────────────────────┘  │
 └───────────────────┴────────────────────────────────────────────────────┘
 ```
 
@@ -49,9 +49,12 @@ It runs directly in your browser, streams responses token-by-token in real time,
 
 - **🚀 100% Pure Vanilla Web Stack**: Built purely with vanilla HTML5, modern CSS3 custom properties, and native ES modules. No React, no Vue, no Tailwind, no Vite, and no Node server required.
 - **⚡ Real-Time SSE Token Streaming**: Ultra-fast streaming via native `ReadableStream` and chunk buffer decoding.
-- **🔌 Multi-Provider Management**: Add and manage multiple AI endpoints simultaneously (e.g. OpenAI, DeepSeek, TokenHarbor, Groq, Ollama).
+- **🔌 Multi-Provider Management**: Add and manage multiple AI endpoints simultaneously (e.g. OpenAI, DeepSeek, Groq, Ollama).
 - **🔀 Dynamic Model Switching**: Switch models and providers on the fly directly from the header dropdown. Chats automatically remember their assigned model.
-- **🛡️ Built-In CORS Bypass Proxy**: Includes an automated zero-dependency local proxy in `server.py` so you can connect to any API without browser CORS blocking.
+- **🛡️ Built-In CORS Bypass Proxy**: Includes an automated zero-dependency local proxy in `server.py` so you can connect to any API without browser CORS blocking — also used to power file-less web search.
+- **📎 File, Folder & Screenshot Attachments**: Attach documents, code files, whole folders, or paste a screenshot straight from your clipboard (Ctrl+V). Images are sent to vision-capable models; text/code files are inlined into the prompt.
+- **🌐 Live Web Search — Just Paste a URL**: Drop in any search engine's homepage URL (DuckDuckGo, Bing, Brave, Google, Wikipedia, a self-hosted SearXNG, or almost anything else) and the app automatically detects the correct query format and result parser. No API key required for most engines. Toggle it on/off per message with the 🌐 **Web** button.
+- **📱 Android Support**: Runs natively on your phone via Termux — install it to your home screen as a installable web app (PWA) with offline shell caching, a mobile-friendly attach menu (gallery/camera), and touch-optimized UI.
 - **🧠 Custom System Instructions**: Set global or persona-based system prompts (with one-click presets for Senior Coder, Concise, Tutor, etc.) that are automatically prepended to every conversation.
 - **🎨 Modern Dark & Light Themes**: Inspired by modern ChatGPT aesthetics with obsidian glassmorphic headers, emerald glowing accents, and smooth animations.
 - **📝 Safe Markdown & Syntax Highlighting**: Headings, lists, blockquotes, tables, and fenced code blocks with language labels and one-click copy buttons.
@@ -70,31 +73,37 @@ It will start the server, display the link, and automatically open your default 
 
 ---
 
-### Option 2: Python (Standard Library)
+### Option 2: Linux / macOS
+
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+This launches `server.py` and opens your default browser automatically (via `xdg-open`, `gnome-open`, or `open`).
+
+---
+
+### Option 3: Android (Termux)
+
+See the full [Android guide](#-running-on-android) below — it takes about 5 minutes and lets you install this as a home-screen app.
+
+---
+
+### Option 4: Manual (Python / any static server)
 
 ```bash
 # Clone or download the repository
-git clone https://github.com/yourusername/agentWebUI.git
-cd agentWebUI
+git clone https://github.com/AIwolfie/WebUI.git
+cd WebUI
 
 # Launch the static server with built-in CORS proxy
 python server.py 8000
 ```
+
 Open **`http://localhost:8000`** in your browser.
 
----
-
-### Option 3: Any Static Server
-
-You can also serve the files with any HTTP server:
-
-```bash
-# Using Node / npx
-npx serve -l 8000
-
-# Using Python default server
-python -m http.server 8000
-```
+You can also serve the files with any HTTP server (`npx serve -l 8000`, `python -m http.server 8000`, etc.), but **file attachments work everywhere while live web search and the CORS proxy require `server.py`** — plain static servers don't have `/api/proxy`.
 
 ---
 
@@ -113,65 +122,34 @@ Localhost AI works with any provider that supports the standard OpenAI `/v1/chat
 | **LM Studio (Local)** | `http://localhost:1234/v1` | `local-model` |
 | **Custom Gateways** | `https://your-custom-proxy.com/v1` | Any model supported by your endpoint |
 
----
-
-## 📂 Project Structure
-
-```text
-agentWebUI/
-├── index.html          # SPA markup shell (Chat, Settings, Modals, Toasts)
-├── style.css           # Pure CSS3 styles, theme variables, glassmorphic UI
-├── server.py           # Zero-dependency Python server + automatic CORS proxy
-├── start.bat           # 1-click Windows batch launcher
-├── run.bat             # Launcher shortcut alias
-├── README.md           # Project documentation
-└── js/
-    ├── api.js          # API client with SSE streaming & proxy fallback
-    ├── app.js          # Main app bootstrap, routing, and lifecycle
-    ├── chat.js         # Chat engine, system prompt injector, message state
-    ├── markdown.js     # Safe XSS-proof markdown parser & code block builder
-    ├── providers.js    # Provider state resolver & model dropdown manager
-    ├── settings.js     # Settings controller, preset chips, storage managers
-    ├── storage.js      # localStorage CRUD wrapper for chats & providers
-    └── utils.js        # Helper utilities, ID generators, formatting
-```
+Vision/image attachments require a multimodal model (e.g. `gpt-4o`, `claude-3.5-sonnet`, `gemini-*`). Plain text models will error if an image is sent.
 
 ---
 
-## 🔒 Privacy & Security
+## 📎 File, Folder & Screenshot Attachments
 
-- **100% Client-Side Storage**: Your API keys, configured endpoints, and chat messages never leave your machine and are stored strictly in your browser's `localStorage`.
-- **Zero Third-Party Trackers**: No analytics, no Google Fonts, no external CDN tracking scripts, and no telemetry.
-- **XSS-Protected Markdown**: Raw user and AI HTML tags are sanitized and escaped prior to Markdown token rendering.
+Click the **📎 attach button** next to the chat input to:
 
----
+- **Attach files or photos** — documents, code, images, CSV/JSON, etc.
+- **Take a screenshot** (Android) — opens the camera directly.
+- **Attach a whole folder** (Desktop) — right-click the 📎 button, or pick "Folder" from the mobile menu where supported.
+- **Paste a screenshot** — just `Ctrl+V` anywhere in the chat input while an image is on your clipboard.
 
-## ⌨️ Keyboard Shortcuts
-
-| Shortcut | Action |
+| File type | What happens |
 | :--- | :--- |
-| `Enter` | Send message |
-| `Shift + Enter` | Insert newline in prompt box |
-| `Esc` | Close open dropdowns or modal dialogs |
+| Images (png/jpg/webp/gif/svg) | Sent as base64 to the model in vision format (requires a vision-capable model) |
+| Text / code files (.js, .py, .md, .json, .csv, .html, etc.) | Content is read and appended to your message as context |
+| Other binary files | Filename is shared with the model; content is not read |
+
+Attachments are capped at **8MB per file** to keep things snappy in `localStorage`. Everything stays on your device — nothing is uploaded anywhere except directly to the AI provider you configured.
 
 ---
 
-## 🤝 Contributing
+## 🌐 Live Web Search (Auto-Detect)
 
-Contributions, issues, and feature requests are welcome!
+Go to **Settings → Web Search**, paste in any search engine's URL, and the app figures out the rest:
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
-<div align="center">
-  <sub>Built with ✦ for privacy, local AI, and clean engineering.</sub>
-</div>
+1. It checks if the URL belongs to a **known engine** (DuckDuckGo, Bing, Brave, Google, Wikipedia) and wires up the correct query format automatically.
+2. If it's an unfamiliar site, it **probes** the page — reading its OpenSearch descriptor, its search `<form>`, or trying common patterns like `/search?q=`, `/?s=`.
+3. It figures out whether responses come back as **JSON or HTML** and extracts titles, links, and snippets accordingly.
+4. Once detected, the configuration is **cached** so future searches are instant.
