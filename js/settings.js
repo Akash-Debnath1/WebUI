@@ -16,7 +16,8 @@ import {
   clearAllLocalData
 } from './storage.js';
 import { testConnection } from './api.js';
-import { escapeHtml, formatBytes } from './utils.js';
+import { escapeHtml, formatBytes, debounce } from './utils.js';
+import { detectSearchEngine } from './websearch.js';
 
 let editingProviderId = null;
 
@@ -65,10 +66,10 @@ export const PROVIDER_PRESETS = {
 export function initSettingsView(context) {
   const { showToast, showConfirmModal, onThemeChange, refreshApp } = context;
 
-  // Render initial settings tabs & forms
   renderProvidersList(showToast, refreshApp);
   renderAppearanceSettings(onThemeChange);
   renderChatSettings();
+  renderWebSearchSettings(showToast);
   renderStorageSettings(showConfirmModal, showToast, refreshApp);
   setupProviderFormListeners(showToast, refreshApp);
 
@@ -165,7 +166,7 @@ function setupProviderFormListeners(showToast, refreshApp) {
   const btnCancelForm = document.getElementById('btn-cancel-provider-form');
   const form = document.getElementById('provider-form');
   const editorTitle = document.getElementById('provider-editor-title');
-  const presetChips = document.querySelectorAll('.preset-chip');
+  const presetChips = document.querySelectorAll('.preset-chip[data-preset]');
   const modelsContainer = document.getElementById('provider-models-inputs');
   const btnAddModel = document.getElementById('btn-add-model-input');
   const btnTestConnection = document.getElementById('btn-test-connection');
@@ -639,6 +640,111 @@ function renderChatSettings() {
 }
 
 /**
+ * Web Search settings: শুধু URL দিলেই auto-detect
+ */
+function renderWebSearchSettings(showToast) {
+  const settings = getSettings();
+
+  const enabledCheck = document.getElementById('check-web-search-enabled');
+  const urlInput = document.getElementById('search-engine-url');
+  const keyInput = document.getElementById('search-api-key');
+  const badge = document.getElementById('search-detect-badge');
+  const btnTest = document.getElementById('btn-test-search');
+
+  if (!urlInput) return;
+
+  if (enabledCheck) enabledCheck.checked = Boolean(settings.webSearchEnabled);
+  urlInput.value = settings.searchEngineUrl || '';
+  if (keyInput) keyInput.value = settings.searchApiKey || '';
+
+  const showBadge = (type, html) => {
+    if (!badge) return;
+    badge.className = `test-result-box test-result-${type}`;
+    badge.innerHTML = html;
+    badge.style.display = 'block';
+  };
+
+  // আগে থেকে detect করা থাকলে সেটা দেখাও
+  if (settings.searchDetected && settings.searchDetectedFor === settings.searchEngineUrl) {
+    const c = settings.searchDetected;
+    showBadge('success', `<strong>✓ Detected: ${escapeHtml(c.name)}</strong><p><code>${escapeHtml(c.template)}</code></p>`);
+  }
+
+  const runDetection = async () => {
+    const url = urlInput.value.trim();
+    if (!url) {
+      if (badge) badge.style.display = 'none';
+      return;
+    }
+
+    saveSettings({ searchEngineUrl: url });
+    if (btnTest) btnTest.disabled = true;
+    showBadge('loading', '<span class="spinner-small"></span> সার্চ ইঞ্জিন detect করা হচ্ছে...');
+
+    const res = await detectSearchEngine(url, keyInput?.value.trim() || '');
+
+    if (res.ok) {
+      saveSettings({ searchDetected: res.config, searchDetectedFor: url });
+      showBadge(
+        'success',
+        `<strong>✓ ${escapeHtml(res.message)}</strong><p><code>${escapeHtml(res.config.template)}</code></p>`
+      );
+    } else {
+      saveSettings({ searchDetected: null, searchDetectedFor: '' });
+      showBadge('error', `<strong>✕ Detect করা যায়নি</strong><p>${escapeHtml(res.message)}</p>`);
+    }
+
+    if (btnTest) btnTest.disabled = false;
+  };
+
+  if (enabledCheck) {
+    enabledCheck.addEventListener('change', () => {
+      saveSettings({ webSearchEnabled: enabledCheck.checked });
+      syncWebSearchToggleButton();
+    });
+  }
+
+  // URL লেখা থামালে (০.৯ সেকেন্ড পর) নিজে থেকে detect
+  urlInput.addEventListener(
+    'input',
+    debounce(() => {
+      saveSettings({ searchEngineUrl: urlInput.value.trim(), searchDetected: null, searchDetectedFor: '' });
+      if (urlInput.value.includes('.')) runDetection();
+    }, 900)
+  );
+
+  urlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runDetection();
+    }
+  });
+
+  document.querySelectorAll('.search-preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      urlInput.value = chip.dataset.searchUrl || '';
+      runDetection();
+    });
+  });
+
+  if (keyInput) {
+    keyInput.addEventListener('input', () => saveSettings({ searchApiKey: keyInput.value.trim() }));
+  }
+
+  if (btnTest) btnTest.addEventListener('click', runDetection);
+}
+
+/**
+ * চ্যাটের Web Search টগল বাটনকে settings-এর সাথে sync করে (app.js থেকেও কল হয়)
+ */
+export function syncWebSearchToggleButton() {
+  const btn = document.getElementById('btn-web-search-toggle');
+  if (!btn) return;
+  const settings = getSettings();
+  btn.classList.toggle('active', Boolean(settings.webSearchEnabled));
+}
+
+/**
  * Render Storage stats & bind Export/Import/Clear handlers
  */
 export function renderStorageSettings(showConfirmModal, showToast, refreshApp) {
@@ -745,7 +851,6 @@ export function renderStorageSettings(showConfirmModal, showToast, refreshApp) {
       const doClearAll = () => {
         clearAllLocalData();
         if (showToast) showToast('All local data wiped.', 'info');
-        closeEditor();
         renderProvidersList(showToast, refreshApp);
         renderStorageSettings(showConfirmModal, showToast, refreshApp);
         if (refreshApp) refreshApp();

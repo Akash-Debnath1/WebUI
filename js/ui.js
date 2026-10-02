@@ -295,8 +295,6 @@ function showChatContextMenu(event, chatId, onRefresh) {
   });
 }
 
-/**
- * Render and update the Header Model Selector
 let currentModelSelectCallback = null;
 
 /**
@@ -381,6 +379,40 @@ export function updateModelSelector(onModelSelect) {
 }
 
 /**
+ * ব্যবহারকারীর attach করা ফাইল/ইমেজগুলোকে মেসেজ বাবলের ভেতরে দেখায়
+ * @param {Array<Object>} attachments
+ * @returns {string}
+ */
+function renderAttachmentsHtml(attachments) {
+  if (!attachments || attachments.length === 0) return '';
+
+  const chips = attachments.map(att => {
+    if (att.isImage && att.dataUrl) {
+      return `<div class="msg-attachment-thumb"><img src="${att.dataUrl}" alt="${escapeHtml(att.name)}" /></div>`;
+    }
+    const label = att.error ? `⚠ ${escapeHtml(att.name)}` : `📄 ${escapeHtml(att.name)}`;
+    return `<div class="msg-attachment-chip" title="${escapeHtml(att.sizeLabel || '')}">${label}</div>`;
+  }).join('');
+
+  return `<div class="msg-attachments-row">${chips}</div>`;
+}
+
+/**
+ * Web search source লিঙ্কগুলো চিপ আকারে দেখায়
+ * @param {Array<{title:string,url:string,snippet:string}>} results
+ * @returns {string}
+ */
+function renderSearchResultsHtml(results) {
+  if (!results || results.length === 0) return '';
+  const items = results.slice(0, 5).map(r => `
+    <a class="search-source-chip" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(r.snippet || '')}">
+      🔗 ${escapeHtml(r.title || r.url)}
+    </a>
+  `).join('');
+  return `<div class="search-sources-box"><span class="search-sources-label">🌐 Web sources:</span>${items}</div>`;
+}
+
+/**
  * Render Chat Messages in Main Area
  * @param {Object} chat
  * @param {Object} handlers - { onRegenerate, onEditMessage, onCopy }
@@ -427,7 +459,8 @@ export function renderChatArea(chat, handlers = {}) {
 
     let contentHtml = '';
     if (isUser) {
-      contentHtml = `<div class="message-user-text">${escapeHtml(msg.content)}</div>`;
+      const attachmentsHtml = renderAttachmentsHtml(msg.attachments);
+      contentHtml = `${attachmentsHtml}<div class="message-user-text">${escapeHtml(msg.content)}</div>`;
     } else {
       contentHtml = markdownEnabled
         ? renderMarkdown(msg.content || '')
@@ -448,6 +481,12 @@ export function renderChatArea(chat, handlers = {}) {
       `;
     }
 
+    // Web search সোর্স: assistant মেসেজের ঠিক আগের user মেসেজে searchResults থাকলে সেটা দেখাও
+    let sourcesHtml = '';
+    if (!isUser && index > 0 && chat.messages[index - 1]?.searchResults?.length) {
+      sourcesHtml = renderSearchResultsHtml(chat.messages[index - 1].searchResults);
+    }
+
     html += `
       <div class="message-row ${isUser ? 'user-row' : 'assistant-row'}" id="msg-${msg.id}" data-id="${msg.id}">
         <div class="message-avatar">
@@ -461,6 +500,7 @@ export function renderChatArea(chat, handlers = {}) {
           <div class="message-bubble">
             <div class="message-content-box">${contentHtml}</div>
             ${devMetricsHtml}
+            ${sourcesHtml}
           </div>
           <div class="message-actions-bar">
             ${

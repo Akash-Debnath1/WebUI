@@ -14,6 +14,7 @@ import {
 import { getActiveProviderAndModel } from './providers.js';
 import { sendChatRequest } from './api.js';
 import { renderMarkdown, setupCodeCopyButtons } from './markdown.js';
+import { performWebSearch, formatResultsAsContext } from './websearch.js';
 
 let currentAbortController = null;
 let isGenerating = false;
@@ -44,11 +45,13 @@ export function createNewConversation() {
 }
 
 /**
- * Prepare messages array for API payload, prepending Custom System Instructions if defined
+ * Prepare messages array for API payload, prepending Custom System Instructions
+ * and (optionally) live web search results context
  * @param {Array<Object>} chatMessages
- * @returns {Array<{role: string, content: string}>}
+ * @param {string} [searchContext] - Optional web search result context to inject as a system message
+ * @returns {Array<{role: string, content: any}>}
  */
-function buildApiMessages(chatMessages) {
+function buildApiMessages(chatMessages, searchContext) {
   const settings = getSettings();
   const systemPrompt = (settings.customInstructions || '').trim();
   const apiMessages = [];
@@ -60,8 +63,20 @@ function buildApiMessages(chatMessages) {
     });
   }
 
+  if (searchContext) {
+    apiMessages.push({
+      role: 'system',
+      content: searchContext
+    });
+  }
+
   for (const m of chatMessages) {
-    if (m.content) {
+    if (m.attachments && m.attachments.length > 0) {
+      apiMessages.push({
+        role: m.role,
+        content: buildMultimodalContent(m)
+      });
+    } else if (m.content) {
       apiMessages.push({
         role: m.role,
         content: m.content
@@ -70,6 +85,34 @@ function buildApiMessages(chatMessages) {
   }
 
   return apiMessages;
+}
+
+/**
+ * টেক্সট + ইমেজ attachments কে OpenAI-compatible multimodal content ফরম্যাটে রূপান্তর করে।
+ * টেক্সট ফাইল হলে content-এর সাথে জুড়ে দেয়, ইমেজ হলে vision-format অ্যারে বানায়।
+ * @param {Object} message
+ * @returns {string|Array<Object>}
+ */
+function buildMultimodalContent(message) {
+  let textBody = message.content || '';
+
+  const textAttachments = message.attachments.filter(a => a.textContent);
+  for (const att of textAttachments) {
+    textBody += `\n\n--- Attached file: ${att.name} ---\n${att.textContent}\n--- End of ${att.name} ---`;
+  }
+
+  const imageAttachments = message.attachments.filter(a => a.isImage && a.dataUrl);
+
+  // ইমেজ না থাকলে plain text পাঠাও (non-vision মডেলের compatibility ভালো থাকে)
+  if (imageAttachments.length === 0) {
+    return textBody;
+  }
+
+  const parts = [{ type: 'text', text: textBody }];
+  for (const att of imageAttachments) {
+    parts.push({ type: 'image_url', image_url: { url: att.dataUrl } });
+  }
+  return parts;
 }
 
 /**
@@ -86,12 +129,13 @@ export function stopGeneration() {
 /**
  * Send user message and stream assistant response
  * @param {string} text
+ * @param {Array<Object>} [attachments] - Processed file/image attachments from attachments.js
  * @param {Object} callbacks - UI hooks for state changes
  * @returns {Promise<void>}
  */
-export async function submitUserMessage(text, callbacks = {}) {
-  const cleanText = text.trim();
-  if (!cleanText || isGenerating) return;
+export async function submitUserMessage(text, attachments = [], callbacks = {}) {
+  const cleanText = (text || '').trim();
+  if ((!cleanText && attachments.length === 0) || isGenerating) return;
 
   const { provider, model } = getActiveProviderAndModel();
   if (!provider) {
@@ -116,7 +160,7 @@ export async function submitUserMessage(text, callbacks = {}) {
   // If first message, generate automatic title locally
   const isFirstMessage = chat.messages.length === 0;
   if (isFirstMessage) {
-    chat.title = generateChatTitle(cleanText);
+    chat.title = generateChatTitle(cleanText || (attachments[0]?.name ?? 'Attachment'));
   }
 
   const userMsgId = generateId();
@@ -124,6 +168,7 @@ export async function submitUserMessage(text, callbacks = {}) {
     id: userMsgId,
     role: 'user',
     content: cleanText,
+    attachments: attachments.length > 0 ? attachments : undefined,
     timestamp: new Date().toISOString()
   };
   chat.messages.push(userMsg);
@@ -131,6 +176,25 @@ export async function submitUserMessage(text, callbacks = {}) {
 
   if (callbacks.onChatUpdated) {
     callbacks.onChatUpdated(chat);
+  }
+
+  // ---- Web Search (যদি Settings/toggle থেকে চালু করা থাকে) ----
+  let searchContext = '';
+  const settings = getSettings();
+  if (settings.webSearchEnabled && cleanText) {
+    if (callbacks.onSearchStart) callbacks.onSearchStart();
+
+    const searchResult = await performWebSearch(cleanText);
+
+    if (searchResult.ok && searchResult.results.length > 0) {
+      searchContext = formatResultsAsContext(searchResult.results, cleanText);
+      userMsg.searchResults = searchResult.results;
+      saveChat(chat);
+    } else if (!searchResult.ok && callbacks.onSearchError) {
+      callbacks.onSearchError(searchResult.message);
+    }
+
+    if (callbacks.onSearchEnd) callbacks.onSearchEnd();
   }
 
   // Prepare Assistant message placeholder
@@ -157,7 +221,7 @@ export async function submitUserMessage(text, callbacks = {}) {
       baseUrl: provider.baseUrl,
       apiKey: provider.apiKey,
       model: model,
-      messages: buildApiMessages(chat.messages.slice(0, -1)), // Send all messages with system prompt prepended
+      messages: buildApiMessages(chat.messages.slice(0, -1), searchContext), // সব মেসেজ + system prompt + search context
       stream: true,
       signal: currentAbortController.signal,
       onToken: (chunk, fullText) => {
@@ -263,12 +327,17 @@ export async function regenerateLastResponse(callbacks = {}) {
 
   let accumulatedContent = '';
 
+  // এই মেসেজের সাথে আগের সেভ করা searchResults থাকলে সেটাকেই context হিসেবে পুনরায় ব্যবহার করো
+  const searchContext = lastUserMsg.searchResults
+    ? formatResultsAsContext(lastUserMsg.searchResults, lastUserMsg.content)
+    : '';
+
   try {
     const result = await sendChatRequest({
       baseUrl: provider.baseUrl,
       apiKey: provider.apiKey,
       model: model,
-      messages: buildApiMessages(chat.messages.slice(0, -1)),
+      messages: buildApiMessages(chat.messages.slice(0, -1), searchContext),
       stream: true,
       signal: currentAbortController.signal,
       onToken: (chunk, fullText) => {
@@ -373,12 +442,28 @@ export async function editUserMessageAndResend(messageId, newContent, callbacks 
 
   let accumulatedContent = '';
 
+  // Web search চালু থাকলে edited প্রশ্নের জন্যও নতুন সার্চ করো
+  let searchContext = '';
+  const settings = getSettings();
+  if (settings.webSearchEnabled && newContent.trim()) {
+    if (callbacks.onSearchStart) callbacks.onSearchStart();
+    const searchResult = await performWebSearch(newContent.trim());
+    if (searchResult.ok && searchResult.results.length > 0) {
+      searchContext = formatResultsAsContext(searchResult.results, newContent.trim());
+      chat.messages[msgIndex].searchResults = searchResult.results;
+      saveChat(chat);
+    } else if (!searchResult.ok && callbacks.onSearchError) {
+      callbacks.onSearchError(searchResult.message);
+    }
+    if (callbacks.onSearchEnd) callbacks.onSearchEnd();
+  }
+
   try {
     const result = await sendChatRequest({
       baseUrl: provider.baseUrl,
       apiKey: provider.apiKey,
       model: model,
-      messages: buildApiMessages(chat.messages.slice(0, -1)),
+      messages: buildApiMessages(chat.messages.slice(0, -1), searchContext),
       stream: true,
       signal: currentAbortController.signal,
       onToken: (chunk, fullText) => {

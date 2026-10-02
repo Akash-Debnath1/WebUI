@@ -1,4 +1,10 @@
-/**
- * Root entry point forwarding to modular js/app.js
- */
-import './js/app.js';
+import {
+  getSettings,
+  saveSettings,
+  getActiveChatId,
+  setActiveChatId,
+  getChatById,
+  getChats,
+  getProviders,
+  saveChat
+} from './storage.js';

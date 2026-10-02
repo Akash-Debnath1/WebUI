@@ -67,11 +67,12 @@ export function isCorsOrNetworkError(error) {
 
 /**
  * Helper to execute a fetch request with automatic local proxy fallback on CORS error
+ * Exported so other modules (e.g. websearch.js) can reuse the same CORS-bypass logic.
  * @param {string} endpoint
  * @param {Object} options
  * @returns {Promise<Response>}
  */
-async function fetchWithProxyFallback(endpoint, options) {
+export async function fetchWithProxyFallback(endpoint, options) {
   try {
     // 1. First attempt direct browser-to-API request
     const response = await fetch(endpoint, options);

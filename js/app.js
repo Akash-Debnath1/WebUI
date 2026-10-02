@@ -32,7 +32,8 @@ import {
   updateStreamingMessage,
   scrollToBottom
 } from './ui.js';
-import { initSettingsView, renderStorageSettings, renderProvidersList } from './settings.js';
+import { initSettingsView, renderStorageSettings, renderProvidersList, syncWebSearchToggleButton } from './settings.js';
+import { processFiles, processClipboardPaste } from './attachments.js';
 
 // DOM Element Selectors
 const elements = {
@@ -51,8 +52,18 @@ const elements = {
   sidebarToggleBtn: document.getElementById('btn-sidebar-toggle'),
   sidebarBackdrop: document.getElementById('sidebar-backdrop'),
   quickPrompts: document.querySelectorAll('.quick-prompt-card'),
-  btnOpenSettingsFromEmpty: document.querySelectorAll('.btn-trigger-settings')
+  btnOpenSettingsFromEmpty: document.querySelectorAll('.btn-trigger-settings'),
+
+  // ---- নতুন: Attachment ও Web Search এলিমেন্ট ----
+  btnAttachFile: document.getElementById('btn-attach-file'),
+  inputAttachFiles: document.getElementById('input-attach-files'),
+  inputAttachFolder: document.getElementById('input-attach-folder'),
+  attachmentStrip: document.getElementById('attachment-preview-strip'),
+  btnWebSearchToggle: document.getElementById('btn-web-search-toggle')
 };
+
+// বর্তমানে সিলেক্ট করা কিন্তু এখনো না-পাঠানো attachments
+let pendingAttachments = [];
 
 /**
  * Initialize Application
@@ -63,6 +74,8 @@ export function initApp() {
   setupSidebarControls();
   setupChatInput();
   setupModelSelectorEvents();
+  setupAttachmentControls();
+  setupWebSearchToggle();
 
   // Initialize Settings module
   initSettingsView({
@@ -256,6 +269,8 @@ export function handleNewChat() {
   }
   const newChat = createNewConversation();
   setActiveChatId(newChat.id);
+  pendingAttachments = [];
+  renderAttachmentPreview();
   if (elements.chatInput) {
     elements.chatInput.value = '';
     elements.chatInput.style.height = 'auto';
@@ -371,6 +386,109 @@ function setupChatInput() {
 }
 
 /**
+ * নতুন: File / Folder / Screenshot Attachment সেটআপ
+ */
+function setupAttachmentControls() {
+  // সাধারণ ক্লিক = ফাইল সিলেক্টর
+  elements.btnAttachFile?.addEventListener('click', () => {
+    elements.inputAttachFiles?.click();
+  });
+
+  // ডান-ক্লিক (right-click) = ফোল্ডার সিলেক্টর
+  elements.btnAttachFile?.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    elements.inputAttachFolder?.click();
+  });
+
+  elements.inputAttachFiles?.addEventListener('change', async e => {
+    if (e.target.files?.length) {
+      const newAttachments = await processFiles(e.target.files);
+      pendingAttachments.push(...newAttachments);
+      renderAttachmentPreview();
+    }
+    e.target.value = '';
+  });
+
+  elements.inputAttachFolder?.addEventListener('change', async e => {
+    if (e.target.files?.length) {
+      const newAttachments = await processFiles(e.target.files);
+      pendingAttachments.push(...newAttachments);
+      renderAttachmentPreview();
+      showToast(`${newAttachments.length} file(s) added from folder.`, 'info', 2200);
+    }
+    e.target.value = '';
+  });
+
+  // Ctrl+V দিয়ে স্ক্রীনশট/ইমেজ পেস্ট করা
+  elements.chatInput?.addEventListener('paste', async e => {
+    const pasted = await processClipboardPaste(e);
+    if (pasted.length > 0) {
+      pendingAttachments.push(...pasted);
+      renderAttachmentPreview();
+      showToast('Screenshot attached from clipboard.', 'success', 1800);
+    }
+  });
+}
+
+/**
+ * Attachment প্রিভিউ চিপ রেন্ডার করে (chat-input-এর উপরে)
+ */
+function renderAttachmentPreview() {
+  const strip = elements.attachmentStrip;
+  if (!strip) return;
+
+  if (pendingAttachments.length === 0) {
+    strip.style.display = 'none';
+    strip.innerHTML = '';
+    return;
+  }
+
+  strip.style.display = 'flex';
+  strip.innerHTML = pendingAttachments
+    .map(att => {
+      const thumb = att.isImage && att.dataUrl
+        ? `<img src="${att.dataUrl}" alt="${att.name}">`
+        : `<span class="attachment-file-icon">📄</span>`;
+      const errorNote = att.error ? `<span class="attachment-error">${att.error}</span>` : '';
+      return `
+        <div class="attachment-chip" data-id="${att.id}">
+          ${thumb}
+          <span class="attachment-chip-name" title="${att.name}">${att.name}</span>
+          ${errorNote}
+          <button type="button" class="attachment-remove-btn" data-id="${att.id}" aria-label="Remove">&times;</button>
+        </div>
+      `;
+    })
+    .join('');
+
+  strip.querySelectorAll('.attachment-remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      pendingAttachments = pendingAttachments.filter(a => a.id !== id);
+      renderAttachmentPreview();
+    });
+  });
+}
+
+/**
+ * নতুন: Web Search চালু/বন্ধ টগল বাটন সেটআপ
+ */
+function setupWebSearchToggle() {
+  syncWebSearchToggleButton();
+  elements.btnWebSearchToggle?.addEventListener('click', () => {
+    const settings = getSettings();
+    const newState = !settings.webSearchEnabled;
+    saveSettings({ webSearchEnabled: newState });
+    syncWebSearchToggleButton();
+    showToast(
+      newState ? '🌐 Web search enabled — real-time results will be used.' : 'Web search disabled.',
+      'info',
+      2200
+    );
+  });
+}
+
+/**
  * Switch Send / Stop buttons in UI
  */
 function setGeneratingState(generating) {
@@ -392,8 +510,8 @@ function setGeneratingState(generating) {
  * Send user message pipeline
  */
 async function handleSendMessage() {
-  const text = elements.chatInput?.value.trim();
-  if (!text || getIsGenerating()) return;
+  const text = elements.chatInput?.value.trim() || '';
+  if ((!text && pendingAttachments.length === 0) || getIsGenerating()) return;
 
   const providers = getProviders();
   if (providers.length === 0) {
@@ -402,7 +520,11 @@ async function handleSendMessage() {
     return;
   }
 
-  // Clear input
+  // Attachments নাও এবং ইনপুট খালি করো
+  const attachmentsToSend = [...pendingAttachments];
+  pendingAttachments = [];
+  renderAttachmentPreview();
+
   if (elements.chatInput) {
     elements.chatInput.value = '';
     elements.chatInput.style.height = 'auto';
@@ -410,7 +532,7 @@ async function handleSendMessage() {
 
   setGeneratingState(true);
 
-  await submitUserMessage(text, {
+  await submitUserMessage(text, attachmentsToSend, {
     onChatUpdated: () => {
       renderSidebarChats(
         elements.searchChatsInput?.value || '',
@@ -418,6 +540,12 @@ async function handleSendMessage() {
         refreshAllViews
       );
       renderCurrentChat();
+    },
+    onSearchStart: () => {
+      showToast('🌐 Searching the web for real-time information...', 'info', 2500);
+    },
+    onSearchError: msg => {
+      showToast(`Web search failed: ${msg}`, 'warning', 4500);
     },
     onGenerationStart: assistantMsgId => {
       updateStreamingMessage(assistantMsgId, '');
@@ -455,6 +583,12 @@ async function handleRegenerate() {
   await regenerateLastResponse({
     onChatUpdated: () => {
       renderCurrentChat();
+    },
+    onSearchStart: () => {
+      showToast('🌐 Re-checking the web for updated results...', 'info', 2200);
+    },
+    onSearchError: msg => {
+      showToast(`Web search failed: ${msg}`, 'warning', 4000);
     },
     onGenerationStart: assistantMsgId => {
       updateStreamingMessage(assistantMsgId, '');
@@ -497,6 +631,12 @@ async function handleEditMessage(messageId, newContent) {
         chatId => loadChat(chatId),
         refreshAllViews
       );
+    },
+    onSearchStart: () => {
+      showToast('🌐 Searching the web for real-time information...', 'info', 2500);
+    },
+    onSearchError: msg => {
+      showToast(`Web search failed: ${msg}`, 'warning', 4500);
     },
     onGenerationStart: assistantMsgId => {
       updateStreamingMessage(assistantMsgId, '');

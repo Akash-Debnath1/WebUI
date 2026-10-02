@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Localhost AI Chat</title>
   <meta name="description" content="Local, privacy-focused ChatGPT-style AI interface built entirely with Vanilla HTML5, CSS3, and JavaScript.">
-  <link rel="stylesheet" href="style.css?v=2.0">
+  <link rel="stylesheet" href="style.css?v=2.2">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5z'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -170,6 +170,9 @@
 
         <!-- Chat Input Bar -->
         <div class="chat-input-wrapper">
+          <!-- Attachment preview strip -->
+          <div class="attachment-preview-strip" id="attachment-preview-strip" style="display:none;"></div>
+
           <div class="chat-input-box">
             <textarea
               class="chat-input-textarea"
@@ -179,6 +182,25 @@
               aria-label="Chat prompt input"
             ></textarea>
             <div class="chat-input-actions">
+              <!-- Attach বাটন (ক্লিক = ফাইল/স্ক্রিনশট, রাইট-ক্লিক = ফোল্ডার) -->
+              <button type="button" class="btn-attach-file" id="btn-attach-file" aria-label="Attach files" title="Attach files/screenshots (left-click) or a folder (right-click)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+              </button>
+              <input type="file" id="input-attach-files" multiple style="display:none;">
+              <input type="file" id="input-attach-folder" webkitdirectory directory multiple style="display:none;">
+
+              <!-- Web Search টগল -->
+              <button type="button" class="btn-web-search-toggle" id="btn-web-search-toggle" aria-label="Toggle web search" title="Toggle real-time web search (configure in Settings)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <span class="web-search-label">Web</span>
+              </button>
+
               <button type="button" class="btn-send-message" id="btn-send-message" aria-label="Send message" title="Send message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -246,7 +268,7 @@
             </div>
 
             <!-- Quick Add Provider Inline Form (Accordion/Card) -->
-            <div class="provider-editor-card" id="provider-inline-editor" style="display: block;">
+            <div class="provider-editor-card" id="provider-inline-editor" style="display: none;">
               <div class="editor-card-header">
                 <h3 class="editor-title" id="provider-editor-title">Configure Provider</h3>
                 <button type="button" class="btn-icon-close" id="btn-close-inline-editor" aria-label="Close Form" onclick="window.__closeProviderEditor()">&times;</button>
@@ -388,6 +410,64 @@
                 rows="4"
                 placeholder="e.g. You are a senior software engineer. Answer questions with clean, well-tested code and direct, concise explanations. Avoid unnecessary filler."
               ></textarea>
+            </div>
+          </div>
+
+          <!-- Web Search Section (URL দিলেই auto-detect) -->
+          <div class="settings-section" id="section-web-search">
+            <div class="settings-section-header">
+              <div class="section-title-group">
+                <h2 class="settings-section-title">Web Search (Real-Time Data)</h2>
+                <div class="settings-section-desc">শুধু সার্চ ইঞ্জিনের URL দিন — চ্যাট নিজে থেকে ঠিক search URL ও ফরম্যাট বুঝে কাজ শুরু করবে। চালু থাকলে প্রতিটি প্রশ্নের সাথে ওয়েব ফলাফল AI-কে দেওয়া হবে। চ্যাটের 🌐 Web বাটন দিয়েও অন/অফ করা যায়।</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="check-web-search-enabled">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="search-engine-url">Search Engine URL</label>
+              <input type="text" class="input-field" id="search-engine-url" placeholder="https://duckduckgo.com  বা  https://your-searxng.example.com" autocomplete="off" spellcheck="false">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">দ্রুত বেছে নিন:</label>
+              <div class="preset-chips-grid">
+                <button type="button" class="preset-chip search-preset-chip" data-search-url="https://duckduckgo.com">
+                  <span class="preset-chip-name">DuckDuckGo</span>
+                  <span class="preset-chip-url">duckduckgo.com</span>
+                </button>
+                <button type="button" class="preset-chip search-preset-chip" data-search-url="https://www.bing.com">
+                  <span class="preset-chip-name">Bing</span>
+                  <span class="preset-chip-url">bing.com</span>
+                </button>
+                <button type="button" class="preset-chip search-preset-chip" data-search-url="https://search.brave.com">
+                  <span class="preset-chip-name">Brave</span>
+                  <span class="preset-chip-url">search.brave.com</span>
+                </button>
+                <button type="button" class="preset-chip search-preset-chip" data-search-url="https://www.google.com">
+                  <span class="preset-chip-name">Google</span>
+                  <span class="preset-chip-url">google.com</span>
+                </button>
+                <button type="button" class="preset-chip search-preset-chip" data-search-url="https://en.wikipedia.org">
+                  <span class="preset-chip-name">Wikipedia</span>
+                  <span class="preset-chip-url">wikipedia.org</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="search-detect-badge" class="test-result-box" style="display:none;"></div>
+
+            <details style="margin-top: 14px;">
+              <summary class="form-label" style="cursor:pointer;">উন্নত: API Key (শুধু যে ইঞ্জিনের key লাগে)</summary>
+              <div class="form-group" style="margin-top: 10px;">
+                <input type="password" class="input-field" id="search-api-key" placeholder="ঐচ্ছিক — Brave API, Google Custom Search ইত্যাদির জন্য" autocomplete="off">
+              </div>
+            </details>
+
+            <div class="form-actions-bar">
+              <button type="button" class="btn btn-secondary" id="btn-test-search">Detect &amp; Test</button>
             </div>
           </div>
 
@@ -720,6 +800,6 @@
   </script>
 
   <!-- Main JavaScript Application Bootstrap (ES Module with cache-busting) -->
-  <script type="module" src="js/app.js?v=2.0"></script>
+  <script type="module" src="js/app.js?v=2.2"></script>
 </body>
 </html>

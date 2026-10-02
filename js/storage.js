@@ -24,7 +24,14 @@ const DEFAULT_SETTINGS = {
   devMode: false,
   activeProviderId: '',
   activeModel: '',
-  customInstructions: ''
+  customInstructions: '',
+
+  // ---- Web Search (URL দিলেই auto-detect) ----
+  webSearchEnabled: false,
+  searchEngineUrl: 'https://duckduckgo.com',
+  searchApiKey: '',          // শুধু API-ভিত্তিক ইঞ্জিনের জন্য (ঐচ্ছিক)
+  searchDetected: null,      // detect হওয়া কনফিগ (cache)
+  searchDetectedFor: ''      // কোন URL-এর জন্য cache করা
 };
 
 /**
