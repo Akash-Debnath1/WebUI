@@ -48,16 +48,27 @@ It runs directly in your browser, streams responses token-by-token in real time,
 ## ✨ Key Features
 
 - **🚀 100% Pure Vanilla Web Stack**: Built purely with vanilla HTML5, modern CSS3 custom properties, and native ES modules. No React, no Vue, no Tailwind, no Vite, and no Node server required.
+
 - **⚡ Real-Time SSE Token Streaming**: Ultra-fast streaming via native `ReadableStream` and chunk buffer decoding.
+
 - **🔌 Multi-Provider Management**: Add and manage multiple AI endpoints simultaneously (e.g. OpenAI, DeepSeek, Groq, Ollama).
+
 - **🔀 Dynamic Model Switching**: Switch models and providers on the fly directly from the header dropdown. Chats automatically remember their assigned model.
+
 - **🛡️ Built-In CORS Bypass Proxy**: Includes an automated zero-dependency local proxy in `server.py` so you can connect to any API without browser CORS blocking — also used to power file-less web search.
+
 - **📎 File, Folder & Screenshot Attachments**: Attach documents, code files, whole folders, or paste a screenshot straight from your clipboard (Ctrl+V). Images are sent to vision-capable models; text/code files are inlined into the prompt.
+
 - **🌐 Live Web Search — Just Paste a URL**: Drop in any search engine's homepage URL (DuckDuckGo, Bing, Brave, Google, Wikipedia, a self-hosted SearXNG, or almost anything else) and the app automatically detects the correct query format and result parser. No API key required for most engines. Toggle it on/off per message with the 🌐 **Web** button.
+
 - **📱 Android Support**: Runs natively on your phone via Termux — install it to your home screen as a installable web app (PWA) with offline shell caching, a mobile-friendly attach menu (gallery/camera), and touch-optimized UI.
+
 - **🧠 Custom System Instructions**: Set global or persona-based system prompts (with one-click presets for Senior Coder, Concise, Tutor, etc.) that are automatically prepended to every conversation.
+
 - **🎨 Modern Dark & Light Themes**: Inspired by modern ChatGPT aesthetics with obsidian glassmorphic headers, emerald glowing accents, and smooth animations.
+
 - **📝 Safe Markdown & Syntax Highlighting**: Headings, lists, blockquotes, tables, and fenced code blocks with language labels and one-click copy buttons.
+
 - **💾 Complete Storage & Backup**: Search conversation history, edit messages, regenerate responses, and export/import full JSON backups.
 
 ---
